@@ -3,9 +3,8 @@ import App from './App.vue'
 import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
 import ui from '@nuxt/ui/vue-plugin'
 import { initializeApp } from 'firebase/app'
-import { router } from './router'
-
-
+import router from './router' // Добавляем импорт роутера
+import './assets/base.css'
 const app = createApp(App)
 
 const firebaseConfig = {
@@ -21,8 +20,7 @@ const firebaseConfig = {
 initializeApp(firebaseConfig)
 
 app.use(autoAnimatePlugin)
-app.use(router)
 app.use(ui)
+app.use(router) // Добавляем роутер здесь
 
 app.mount('#app')
-
