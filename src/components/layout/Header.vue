@@ -82,14 +82,14 @@
             <span class="font-medium">Гайды</span>
           </RouterLink>
 
-          <!-- Турниры -->
+          <!-- Матчи -->
           <RouterLink
-            to="/tournaments"
+            to="/matches"
             class="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors group"
-            :class="{ 'text-white': $route.path === '/tournaments' }"
+            :class="{ 'text-white': $route.path === '/matches' }"
           >
-            <span class="text-lg">🏅</span>
-            <span class="font-medium">Турниры</span>
+            <span class="text-lg">⚔️</span>
+            <span class="font-medium">Матчи</span>
           </RouterLink>
 
           <!-- Новости -->

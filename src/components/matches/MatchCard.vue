@@ -72,30 +72,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
-
-interface MatchPlayer {
-  id: number
-  name: string
-  avatar?: string
-  rank?: number
-  isLive?: boolean
-  score: number
-  twitch?: string
-}
-
-interface Match {
-  id: number
-  tournament: string
-  players: MatchPlayer[]
-  category: string
-  version: string
-  seedType: string
-  format: string
-  status: 'upcoming' | 'live' | 'completed'
-  time: string
-  date: string
-  viewers?: number
-}
+import type { Match, MatchPlayer } from '@/types/matches'
 
 defineProps<{
   match: Match

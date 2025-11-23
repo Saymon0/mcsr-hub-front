@@ -14,9 +14,9 @@ const router = createRouter({
       component: () => import('@/views/LeaderboardView.vue'),
     },
     {
-      path: '/tournaments',
-      name: 'tournaments',
-      component: () => import('@/views/TournamentsView.vue'),
+      path: '/matches',
+      name: 'matches',
+      component: () => import('@/views/MatchesView.vue'),
     },
     {
       path: '/training',
@@ -32,6 +32,22 @@ const router = createRouter({
       path: '/world-records',
       name: 'world-records',
       component: () => import('@/views/WorldRecordsView.vue'),
+    },
+    {
+      path: '/match/:id',
+      name: 'match',
+      component: () => import('@/views/MatchView.vue'),
+    },
+    // Добавляем недостающие маршруты
+    {
+      path: '/guides',
+      name: 'guides',
+      component: () => import('@/views/GuidesView.vue'),
+    },
+    {
+      path: '/news',
+      name: 'news',
+      component: () => import('@/views/NewsView.vue'),
     },
   ],
 })
