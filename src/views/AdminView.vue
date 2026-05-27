@@ -94,7 +94,7 @@ const loadInitialData = () => {
 
 const loadTournaments = async () => {
   try {
-    const res = await axios.get('http://localhost:3001/api/tournaments')
+    const res = await axios.get('import.meta.env.VITE_API_URL/api/tournaments')
     tournaments.value = res.data
   } catch (err) {
     console.error('Ошибка загрузки турниров:', err)
@@ -103,7 +103,7 @@ const loadTournaments = async () => {
 
 const loadMatches = async () => {
   try {
-    const res = await axios.get('http://localhost:3001/api/matches')
+    const res = await axios.get('import.meta.env.VITE_API_URL/api/matches')
     matches.value = res.data
   } catch (err) {
     console.error('Ошибка загрузки матчей:', err)
@@ -131,12 +131,12 @@ const submitTournament = async () => {
   try {
     if (editingTournamentId.value) {
       await axios.put(
-        `http://localhost:3001/api/tournaments/${editingTournamentId.value}`,
+        `import.meta.env.VITE_API_URL/api/tournaments/${editingTournamentId.value}`,
         tourForm.value,
       )
       alert('Турнир успешно обновлен!')
     } else {
-      await axios.post('http://localhost:3001/api/tournaments', tourForm.value)
+      await axios.post('import.meta.env.VITE_API_URL/api/tournaments', tourForm.value)
       alert('Турнир успешно создан!')
     }
     loadTournaments()
@@ -151,7 +151,7 @@ const deleteTournament = async (id: number) => {
     return
 
   try {
-    await axios.delete(`http://localhost:3001/api/tournaments/${id}`)
+    await axios.delete(`import.meta.env.VITE_API_URL/api/tournaments/${id}`)
     alert('Турнир и его матчи удалены')
     loadTournaments()
     loadMatches()
@@ -184,10 +184,10 @@ const submitMatch = async () => {
     }
 
     if (editingMatchId.value) {
-      await axios.put(`http://localhost:3001/api/matches/${editingMatchId.value}`, payload)
+      await axios.put(`import.meta.env.VITE_API_URL/api/matches/${editingMatchId.value}`, payload)
       alert('Матч успешно обновлен!')
     } else {
-      await axios.post('http://localhost:3001/api/matches', payload)
+      await axios.post('import.meta.env.VITE_API_URL/api/matches', payload)
       alert('Матч успешно добавлен! Статистика игроков подгружена.')
     }
 
@@ -202,7 +202,7 @@ const submitMatch = async () => {
 const deleteMatch = async (id: number) => {
   if (!confirm('Вы уверены, что хотите удалить этот матч?')) return
   try {
-    await axios.delete(`http://localhost:3001/api/matches/${id}`)
+    await axios.delete(`import.meta.env.VITE_API_URL/api/matches/${id}`)
     loadMatches()
   } catch (err) {
     alert('Ошибка при удалении матча')
@@ -228,7 +228,7 @@ const updateScore = async (matchId: number, playerIndex: number, newScore: numbe
   }
 
   try {
-    await axios.patch(`http://localhost:3001/api/matches/${matchId}/score`, {
+    await axios.patch(`import.meta.env.VITE_API_URL/api/matches/${matchId}/score`, {
       score1: s1,
       score2: s2,
     })

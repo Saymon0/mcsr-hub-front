@@ -19,7 +19,7 @@ const currentFilter = ref<'ongoing' | 'upcoming' | 'finished'>('ongoing')
 
 const fetchTournaments = async () => {
   try {
-    const response = await axios.get('http://localhost:3001/api/tournaments')
+    const response = await axios.get('import.meta.env.VITE_API_URL/api/tournaments')
     tournaments.value = response.data
   } catch (err) {
     console.error('Ошибка:', err)

@@ -30,7 +30,7 @@ const currentFilter = ref<'ongoing' | 'upcoming' | 'finished'>('upcoming')
 const fetchMatches = async () => {
   try {
     isLoading.value = true
-    const res = await fetch('http://localhost:3001/api/matches')
+    const res = await fetch('import.meta.env.VITE_API_URL/api/matches')
     if (!res.ok) throw new Error('Ошибка при загрузке матчей')
     matches.value = await res.json()
   } catch (err) {
@@ -86,7 +86,7 @@ onMounted(fetchMatches)
     <Header />
 
     <main class="max-w-7xl mx-auto px-6 py-10">
-  
+
       <!-- Шапка и Фильтры -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <h1 class="text-4xl font-black uppercase tracking-tighter leading-none">

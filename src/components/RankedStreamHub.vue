@@ -91,7 +91,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     // Используем твой эндпоинт
-    const res = await fetch('http://localhost:3001/api/ranked/top-streams')
+    const res = await fetch('import.meta.env.VITE_API_URL/api/ranked/top-streams')
     const data = await res.json()
     players.value = data
 

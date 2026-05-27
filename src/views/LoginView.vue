@@ -88,6 +88,7 @@ const messageClass = computed(() => {
     ? 'bg-green-500/20 text-green-400'
     : 'bg-red-500/20 text-red-400'
 })
+const API_BASE_URL = import.meta.env.VITE_API_URL
 
 const handleLogin = async () => {
   try {
@@ -95,7 +96,7 @@ const handleLogin = async () => {
     message.value = ''
 
     // 1. Меняем URL на правильный роут Node.js сервера
-    const res = await axios.post('http://localhost:3001/api/auth/login', form.value)
+    const res = await axios.post(`${API_BASE_URL}/auth/login`, form.value)
 
     // 2. Успешный вход (если сервер вернул 200 OK, значит res.data содержит токен)
     if (res.data.token) {

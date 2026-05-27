@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header.vue'
 import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
 
 // Указываем точный адрес бэкенда, чтобы избежать проблем с прокси и путями
-const API_BASE_URL = 'http://localhost:3001/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL
 
 interface Player {
   id: number | string
