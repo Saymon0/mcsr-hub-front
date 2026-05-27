@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import API_URL from '@/api';
+import API_URL from '@/api'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from '@/components/layout/Header.vue'
@@ -95,8 +95,8 @@ const fetchData = async () => {
   try {
     isLoading.value = true
 
-    // Загружаем матч
-    const res = await fetch(`https://mcsr-hub-back.onrender.com/api/matches/${matchId}`)
+    // Загружаем матч с использованием динамического URL
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}`)
     if (!res.ok) throw new Error('Матч не найден')
     match.value = await res.json()
 
@@ -108,8 +108,9 @@ const fetchData = async () => {
 
     if (match.value?.tournament_id) {
       requests.push(
-        fetch(`${API_URL}/api/tournaments/${match.value.tournament_id}`).then((r) =>
-          r.json(),
+        // Используем импорт переменной окружения вместо API_URL (если он был статичным)
+        fetch(`${import.meta.env.VITE_API_URL}/api/tournaments/${match.value.tournament_id}`).then(
+          (r) => r.json(),
         ),
       )
     }

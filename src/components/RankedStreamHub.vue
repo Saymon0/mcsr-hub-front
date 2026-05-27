@@ -90,13 +90,15 @@ const loading = ref(true)
 const fetchData = async () => {
   loading.value = true
   try {
-    // Используем твой эндпоинт
-    const res = await fetch('https://mcsr-hub-back.onrender.com/api/ranked/top-streams')
+    // Используем динамический URL из переменной окружения
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/ranked/top-streams`)
+
+    if (!res.ok) throw new Error('Ошибка ответа сервера')
+
     const data = await res.json()
     players.value = data
 
     if (players.value.length > 0) {
-      // Автоматически выбираем первого стримера в онлайне
       selectedPlayer.value = players.value.find((p) => p.isLive) || players.value[0]
     }
   } catch (e) {

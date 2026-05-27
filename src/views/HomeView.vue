@@ -321,9 +321,13 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const fetchMatches = async () => {
   try {
     loadingMatches.value = true
-    const res = await fetch('https://mcsr-hub-back.onrender.com/api/matches')
+    // Заменяем жестко прописанный URL на переменную окружения
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/matches`)
+
     if (res.ok) {
       matches.value = await res.json()
+    } else {
+      console.error('Ошибка ответа сервера:', res.status)
     }
   } catch (e) {
     console.error('Ошибка загрузки матчей:', e)
