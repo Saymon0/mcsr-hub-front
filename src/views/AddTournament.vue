@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import API_URL from '@/api';
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
@@ -14,7 +15,7 @@ const createTournament = async () => {
 
   isSubmitting.value = true
   try {
-    await axios.post('import.meta.env.VITE_API_URL/api/tournaments', {
+    await axios.post(`${API_URL}/api/tournaments`, {
       title: title.value,
       description: description.value,
       status: status.value,

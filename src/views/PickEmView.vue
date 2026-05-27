@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import API_URL from '@/api';
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import Header from '@/components/layout/Header.vue'
 import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
 
 // Указываем точный адрес бэкенда, чтобы избежать проблем с прокси и путями
-const API_BASE_URL = import.meta.env.VITE_API_URL
+const API_BASE_URL = API_URL
 
 interface Player {
   id: number | string

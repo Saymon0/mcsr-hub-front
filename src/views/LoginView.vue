@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import API_URL from '@/api';
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
@@ -88,7 +89,7 @@ const messageClass = computed(() => {
     ? 'bg-green-500/20 text-green-400'
     : 'bg-red-500/20 text-red-400'
 })
-const API_BASE_URL = import.meta.env.VITE_API_URL
+const API_BASE_URL = API_URL
 
 const handleLogin = async () => {
   try {

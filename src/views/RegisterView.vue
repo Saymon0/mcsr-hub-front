@@ -160,6 +160,7 @@
 </template>
 
 <script setup lang="ts">
+import API_URL from '@/api';
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -266,7 +267,7 @@ const handleRegister = async () => {
     message.value = ''
 
     // 1. Меняем URL на правильный путь Node.js сервера
-    const response = await axios.post('import.meta.env.VITE_API_URL/api/auth/register', form.value)
+    const response = await axios.post(`${API_URL}/api/auth/register`, form.value)
 
     status.value = 'success'
     message.value = 'Регистрация успешна! Перенаправляем...'

@@ -30,7 +30,7 @@ const currentFilter = ref<'ongoing' | 'upcoming' | 'finished'>('upcoming')
 const fetchMatches = async () => {
   try {
     isLoading.value = true
-    const res = await fetch('import.meta.env.VITE_API_URL/api/matches')
+    const res = await fetch('https://mcsr-hub-back.onrender.com/api/matches')
     if (!res.ok) throw new Error('Ошибка при загрузке матчей')
     matches.value = await res.json()
   } catch (err) {

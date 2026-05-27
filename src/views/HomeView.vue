@@ -321,7 +321,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const fetchMatches = async () => {
   try {
     loadingMatches.value = true
-    const res = await fetch('import.meta.env.VITE_API_URL/api/matches')
+    const res = await fetch('https://mcsr-hub-back.onrender.com/api/matches')
     if (res.ok) {
       matches.value = await res.json()
     }

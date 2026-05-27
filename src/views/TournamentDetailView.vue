@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import API_URL from '@/api';
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router' // Добавили useRouter
 import axios from 'axios'
@@ -39,8 +40,8 @@ const fetchData = async () => {
   try {
     const id = route.params.id
     const [tRes, mRes] = await Promise.all([
-      axios.get(`import.meta.env.VITE_API_URL/api/tournaments/${id}`),
-      axios.get(`import.meta.env.VITE_API_URL/api/tournaments/${id}/matches`),
+      axios.get(`${API_URL}/api/tournaments/${id}`),
+      axios.get(`${API_URL}/api/tournaments/${id}/matches`),
     ])
     tournament.value = tRes.data
     matches.value = mRes.data
