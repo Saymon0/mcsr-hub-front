@@ -19,35 +19,46 @@ const router = createRouter({
       component: () => import('@/views/MatchesView.vue'),
     },
     {
-      path: '/training',
-      name: 'training',
-      component: () => import('@/views/TrainingView.vue'),
-    },
-    {
-      path: '/streams',
-      name: 'streams',
-      component: () => import('@/views/StreamsView.vue'),
-    },
-    {
-      path: '/world-records',
-      name: 'world-records',
-      component: () => import('@/views/WorldRecordsView.vue'),
-    },
-    {
-      path: '/match/:id',
-      name: 'match',
+      path: '/matches/:id',
+      name: 'match-detail',
       component: () => import('@/views/MatchView.vue'),
-    },
-    // Добавляем недостающие маршруты
-    {
-      path: '/guides',
-      name: 'guides',
-      component: () => import('@/views/GuidesView.vue'),
+      props: true,
     },
     {
-      path: '/news',
-      name: 'news',
-      component: () => import('@/views/NewsView.vue'),
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+    },
+    {
+      path: '/tournaments',
+      name: 'tournaments',
+      component: () => import('@/views/TournamentsView.vue'),
+    },
+    {
+      path: '/tournaments/:id',
+      name: 'tournament-detail',
+      component: () => import('@/views/TournamentDetailView.vue'),
+      props: true,
+    },
+    {
+      path: '/pickem',
+      name: 'pickem',
+      component: () => import('@/views/PickEmView.vue'),
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/AdminView.vue'),
+    },
+    {
+      path: '/admin/add-tournament',
+      name: 'add-tournament',
+      component: () => import('@/views/AddTournament.vue'),
     },
   ],
 })

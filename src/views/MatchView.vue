@@ -1,296 +1,512 @@
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import Header from '@/components/layout/Header.vue'
+import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
+
+// Интерфейс для типизации статистики игроков
+interface PlayerStats {
+  eloRate: number | null
+  eloRank: number | null
+  wins: number
+  totalMatches: number
+  bestTime: number | null
+  connections?: {
+    twitch?: { name: string; id: string }
+    discord?: { name: string; id: string }
+    youtube?: { name: string; id: string }
+  }
+}
+
+const route = useRoute()
+const matchId = route.params.id
+
+// Реактивные состояния
+const match = ref<any>(null)
+const tournament = ref<any>(null)
+const isLoading = ref(true)
+const player1Stats = ref<PlayerStats | null>(null)
+const player2Stats = ref<PlayerStats | null>(null)
+
+/**
+ * Вычисляемый массив сидов.
+ * Проходит циклом по количеству игр в формате (например, 3 для BO3)
+ * и извлекает поля seed1, seed2... из объекта матча.
+ */
+const seedsArray = computed(() => {
+  if (!match.value) return []
+  const formatCount = parseInt(match.value.format) || 1
+  const result = []
+
+  for (let i = 1; i <= formatCount; i++) {
+    const seedValue = match.value[`seed${i}`]
+    if (seedValue) {
+      result.push({
+        id: i,
+        name: seedValue,
+      })
+    }
+  }
+  return result
+})
+
+// Форматирование времени (мс -> ММ:СС)
+const formatMs = (ms: string | number | null | undefined) => {
+  const time = Number(ms)
+  if (!ms || isNaN(time) || time === 0) return 'N/A'
+  const minutes = Math.floor(time / 60000)
+  const seconds = Math.floor((time % 60000) / 1000)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+// Расчет винрейта
+const calculateWinRate = (stats: PlayerStats | null) => {
+  if (!stats || stats.totalMatches === 0) return '0%'
+  return Math.round((stats.wins / stats.totalMatches) * 100) + '%'
+}
+
+// Загрузка статистики из MCSR API
+const fetchMCSRData = async (nickname: string): Promise<PlayerStats | null> => {
+  try {
+    const res = await fetch(`https://api.mcsrranked.com/users/${nickname}`)
+    if (!res.ok) return null
+    const json = await res.json()
+    const data = json.data
+
+    const winStat = data.statistics?.season?.wins?.ranked || 0
+    const loseStat = data.statistics?.season?.loses?.ranked || 0
+
+    return {
+      eloRate: data.eloRate,
+      eloRank: data.eloRank,
+      wins: winStat,
+      totalMatches: winStat + loseStat,
+      bestTime: data.statistics?.season?.bestTime?.ranked || null,
+      connections: data.connections,
+    }
+  } catch (err) {
+    return null
+  }
+}
+
+// Основная функция загрузки данных
+const fetchData = async () => {
+  try {
+    isLoading.value = true
+
+    // Загружаем матч
+    const res = await fetch(`http://localhost:3001/api/matches/${matchId}`)
+    if (!res.ok) throw new Error('Матч не найден')
+    match.value = await res.json()
+
+    // Загружаем турнир и статистику игроков параллельно
+    const requests: Promise<any>[] = [
+      fetchMCSRData(match.value.player1_name),
+      fetchMCSRData(match.value.player2_name),
+    ]
+
+    if (match.value?.tournament_id) {
+      requests.push(
+        fetch(`http://localhost:3001/api/tournaments/${match.value.tournament_id}`).then((r) =>
+          r.json(),
+        ),
+      )
+    }
+
+    const [p1, p2, tData] = await Promise.all(requests)
+
+    player1Stats.value = p1
+    player2Stats.value = p2
+    if (tData) tournament.value = tData
+  } catch (err) {
+    console.error('Ошибка загрузки:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Порог побед (например, 2 для BO3)
+const winThreshold = computed(() => {
+  const format = String(match.value?.format || '').toLowerCase()
+  const num = parseInt(format)
+  return !isNaN(num) ? Math.ceil(num / 2) : 1
+})
+
+// Красивое отображение формата
+const formatText = computed(() => {
+  const val = match.value?.format
+  if (!val) return 'Best of 1'
+  return isNaN(Number(val)) ? val : `Best of ${val}`
+})
+
+onMounted(fetchData)
+</script>
 <template>
-  <div>
+  <div class="min-h-screen bg-[#1a1147] text-white">
     <Header />
 
-    <main class="container mx-auto px-4 py-6" v-if="currentMatch">
+    <main v-if="match" class="max-w-7xl mx-auto px-6 py-10">
       <!-- Хлебные крошки -->
-      <nav class="flex items-center space-x-2 text-gray-400 mb-6 text-sm">
-        <RouterLink to="/" class="hover:text-[#77bb55] transition-colors">Главная</RouterLink>
-        <span>›</span>
-        <RouterLink to="/" class="hover:text-[#77bb55] transition-colors">Матчи</RouterLink>
-        <span>›</span>
-        <span class="text-white">{{ currentMatch.tournament }}</span>
+      <nav
+        class="flex items-center gap-2 text-zinc-400 text-sm mb-8 font-bold uppercase tracking-wider"
+      >
+        <RouterLink to="/tournaments" class="hover:text-white transition-colors"
+          >Турниры</RouterLink
+        >
+        <span class="text-zinc-600">/</span>
+        <RouterLink
+          v-if="tournament"
+          :to="`/tournaments/${tournament.id}`"
+          class="hover:text-white transition-colors"
+        >
+          {{ tournament.title }}
+        </RouterLink>
+        <span class="text-zinc-600">/</span>
+        <span class="text-white">{{ match.player1_name }} vs {{ match.player2_name }}</span>
       </nav>
 
-      <!-- Основная информация о матче -->
-      <div class="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4">
-          <div class="flex-1">
-            <h1 class="text-2xl font-bold text-white mb-2">{{ currentMatch.tournament }}</h1>
-            <p v-if="currentMatch.description" class="text-gray-300 mb-3">
-              {{ currentMatch.description }}
-            </p>
-            <div class="flex flex-wrap items-center gap-3 text-gray-300 text-sm">
-              <span class="bg-gray-700 px-2 py-1 rounded">{{ currentMatch.category }}</span>
-              <span class="bg-gray-700 px-2 py-1 rounded">{{ currentMatch.version }}</span>
-              <span class="bg-gray-700 px-2 py-1 rounded">{{ currentMatch.seedType }}</span>
-              <span class="bg-gray-700 px-2 py-1 rounded">{{ currentMatch.format }}</span>
-              <span v-if="currentMatch.prizePool" class="bg-yellow-600 px-2 py-1 rounded">
-                Призовой фонд: ${{ currentMatch.prizePool.toLocaleString() }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Статус матча -->
-          <div class="mt-4 lg:mt-0 lg:text-right">
-            <div
-              v-if="currentMatch.status === 'live'"
-              class="flex items-center space-x-3 bg-red-600 px-4 py-2 rounded-lg text-white"
+      <!-- Заголовок матча -->
+      <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6"
+      >
+        <div>
+          <h1 class="text-4xl md:text-6xl font-black uppercase mb-4">
+            {{ tournament?.title || 'Матч турнира' }}
+          </h1>
+          <div class="flex flex-wrap gap-3">
+            <span
+              class="px-4 py-1.5 bg-[#3C2A7A] border border-white/10 rounded-lg text-xs font-black uppercase tracking-widest text-zinc-300"
             >
-              <span class="w-3 h-3 bg-white rounded-full animate-pulse"></span>
-              <div>
-                <div class="font-bold">В ЭФИРЕ</div>
-                <div class="text-sm opacity-90">{{ currentMatch.viewers }} зрителей</div>
-              </div>
-            </div>
-            <div
-              v-else-if="currentMatch.status === 'completed'"
-              class="bg-gray-600 px-4 py-2 rounded-lg text-white"
+              {{ match.category || 'Any% RSG' }}
+            </span>
+            <span
+              class="px-4 py-1.5 bg-[#3C2A7A] border border-white/10 rounded-lg text-xs font-black uppercase tracking-widest text-zinc-300"
             >
-              <div class="font-bold">ЗАВЕРШЕНО</div>
-              <div class="text-sm opacity-90">{{ formatMatchDate(currentMatch.date) }}</div>
-            </div>
-            <div v-else class="bg-[#77bb55] px-4 py-2 rounded-lg text-white">
-              <div class="font-bold">СКОРО</div>
-              <div class="text-sm opacity-90">{{ formatDetailedDate(currentMatch.date) }}</div>
-            </div>
+              {{ match.version || '1.16.1' }}
+            </span>
+            <span
+              class="px-4 py-1.5 bg-[#7c3aed] border border-white/10 rounded-lg text-xs font-black uppercase tracking-widest text-white"
+            >
+              {{ formatText }}
+            </span>
           </div>
         </div>
 
-        <!-- Участники матча -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div
+          class="bg-[#3C2A7A] border border-white/10 p-6 rounded-[2rem] min-w-[240px] text-center shadow-xl"
+        >
           <div
-            v-for="(player, index) in currentMatch.players"
-            :key="player.id"
-            class="bg-gray-750 rounded-lg p-4 border-2 transition-all duration-300"
-            :class="getPlayerCardClass(player, index)"
+            v-if="match.status === 'live'"
+            class="text-red-500 font-black uppercase text-xs tracking-[0.2em] mb-2 animate-pulse"
           >
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center space-x-3">
-                <PlayerAvatar :player="player" :size="'lg'" />
-                <div>
-                  <div class="text-white font-bold text-lg">{{ player.name }}</div>
-                  <div class="text-gray-400 text-sm">Ранг #{{ player.rank }}</div>
-                  <div class="text-gray-400 text-sm">
-                    Лучшее время:
-                    <span v-if="player.bestTime" class="text-white font-medium">
-                      {{ player.bestTime }}
-                    </span>
-                    <span v-else class="text-gray-500">—</span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                v-if="currentMatch.status === 'completed'"
-                class="text-xl font-bold"
-                :class="player.score >= 2 ? 'text-[#77bb55]' : 'text-red-500'"
-              >
-                {{ player.score >= 2 ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ' }}
-              </div>
-            </div>
-
-            <!-- Статистика игрока -->
-            <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
-              <div class="text-gray-400">Процент побед:</div>
-              <div class="text-white text-right">{{ player.winRate }}%</div>
-              <div class="text-gray-400">Всего забегов:</div>
-              <div class="text-white text-right">{{ player.totalRuns }}</div>
-            </div>
-
-            <!-- Счет игр -->
-            <div class="flex justify-between items-center mb-4">
-              <span class="text-gray-400 text-sm">Выигранные игры:</span>
-              <div class="flex items-center space-x-3">
-                <div class="flex space-x-1">
-                  <div
-                    v-for="n in 2"
-                    :key="n"
-                    class="w-5 h-5 rounded-full border-2 transition-colors"
-                    :class="
-                      n <= player.score
-                        ? 'bg-[#77bb55] border-[#77bb55]'
-                        : 'bg-transparent border-gray-500'
-                    "
-                  ></div>
-                </div>
-                <span class="text-white font-bold min-w-[40px] text-right"
-                  >{{ player.score }}/2</span
-                >
-              </div>
-            </div>
-
-            <!-- Ссылка на трансляцию -->
-            <a
-              v-if="player.twitch"
-              :href="player.twitch"
-              target="_blank"
-              class="block w-full bg-[#6441a5] hover:bg-[#7d5bbe] text-white text-center py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02]"
-            >
-              📺 Смотреть на Twitch
-            </a>
+            ● В ЭФИРЕ
+          </div>
+          <div
+            v-else-if="match.status === 'completed'"
+            class="text-green-400 font-black uppercase text-xs tracking-[0.2em] mb-2"
+          >
+            ЗАВЕРШЕН
+          </div>
+          <div class="text-xl font-black uppercase">
+            {{
+              new Date(match.match_date).toLocaleString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            }}
           </div>
         </div>
       </div>
 
-      <!-- Детальная информация -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Информация о матче -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 class="text-white font-bold mb-4 text-lg">Детали матча</h2>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Формат:</span>
-              <span class="text-white font-medium">{{ currentMatch.format }}</span>
+      <!-- Карточки игроков -->
+      <div class="grid md:grid-cols-2 gap-8 mb-12">
+        <!-- Player 1 -->
+        <div
+          class="bg-[#2D1B69] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-2xl flex flex-col"
+        >
+          <div class="flex items-start gap-6 mb-6">
+            <PlayerAvatar
+              :player="{
+                id: match.player1_id,
+                name: match.player1_name,
+                rank: player1Stats?.eloRank || match.player1_rank,
+              }"
+              size="lg"
+            />
+            <div class="flex-1">
+              <h2
+                class="text-3xl font-black uppercase group-hover:text-[#7c3aed] transition-colors leading-none mb-1"
+              >
+                {{ match.player1_name }}
+              </h2>
+              <div class="text-zinc-400 font-bold uppercase text-xs tracking-widest">
+                РАНГ #{{ player1Stats?.eloRank || match.player1_rank || '0' }}
+              </div>
+              <div class="text-green-400/60 font-bold uppercase text-[10px] tracking-widest mt-1">
+                ЛУЧШЕЕ ВРЕМЯ: {{ formatMs(player1Stats?.bestTime) }}
+              </div>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Тип сида:</span>
-              <span class="text-white font-medium">{{ currentMatch.seedType }}</span>
+          </div>
+
+          <a
+            v-if="player1Stats?.connections?.twitch"
+            :href="`https://twitch.tv/${player1Stats.connections.twitch.name}`"
+            target="_blank"
+            class="mb-6 w-full bg-[#9146ff] hover:bg-[#a970ff] text-white text-center py-3 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+          >
+            СМОТРЕТЬ ТРАНСЛЯЦИЮ
+          </a>
+
+          <div class="grid grid-cols-2 gap-4 mb-8 mt-auto">
+            <div class="bg-black/20 rounded-2xl p-4 border border-white/5">
+              <div class="text-zinc-500 text-[10px] font-black uppercase mb-1">Процент побед</div>
+              <div class="text-xl font-black text-yellow-500">
+                {{ calculateWinRate(player1Stats) }}
+              </div>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Версия:</span>
-              <span class="text-white font-medium">{{ currentMatch.version }}</span>
+            <div class="bg-black/20 rounded-2xl p-4 border border-white/5">
+              <div class="text-zinc-500 text-[10px] font-black uppercase mb-1">Всего матчей</div>
+              <div class="text-xl font-black">{{ player1Stats?.totalMatches || 0 }}</div>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Категория:</span>
-              <span class="text-white font-medium">{{ currentMatch.category }}</span>
+          </div>
+
+          <div
+            class="flex items-center justify-between bg-black/30 p-5 rounded-2xl border border-white/5"
+          >
+            <span class="text-zinc-400 font-black uppercase text-xs tracking-widest">Счет</span>
+            <div class="flex items-center gap-3">
+              <div class="flex gap-1.5">
+                <div
+                  v-for="i in winThreshold"
+                  :key="i"
+                  :class="[
+                    'w-4 h-4 rotate-45 border-2 transition-all duration-500',
+                    match.score1 >= i
+                      ? 'bg-green-400 border-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'
+                      : 'border-white/10',
+                  ]"
+                ></div>
+              </div>
+              <span class="text-4xl font-black ml-2">{{ match.score1 }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Статистика матча -->
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 class="text-white font-bold mb-4 text-lg">Статистика матча</h2>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Статус:</span>
-              <span class="text-white font-medium capitalize">{{ getStatusText(currentMatch.status) }}</span>
-            </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-700">
-              <span class="text-gray-400">Дата:</span>
-              <span class="text-white font-medium">{{
-                formatDetailedDate(currentMatch.date)
-              }}</span>
-            </div>
-            <div
-              v-if="currentMatch.viewers"
-              class="flex justify-between items-center py-2 border-b border-gray-700"
-            >
-              <span class="text-gray-400">Пик зрителей:</span>
-              <span class="text-white font-medium">{{
-                currentMatch.viewers.toLocaleString()
-              }}</span>
-            </div>
-            <div
-              v-if="currentMatch.prizePool"
-              class="flex justify-between items-center py-2 border-b border-gray-700"
-            >
-              <span class="text-gray-400">Призовой фонд:</span>
-              <span class="text-white font-medium"
-                >${{ currentMatch.prizePool.toLocaleString() }}</span
+        <!-- Player 2 -->
+        <div
+          class="bg-[#2D1B69] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-2xl flex flex-col"
+        >
+          <div class="flex items-start gap-6 mb-6">
+            <PlayerAvatar
+              :player="{
+                id: match.player2_id,
+                name: match.player2_name,
+                rank: player2Stats?.eloRank || match.player2_rank,
+              }"
+              size="lg"
+            />
+            <div class="flex-1">
+              <h2
+                class="text-3xl font-black uppercase group-hover:text-[#7c3aed] transition-colors leading-none mb-1"
               >
+                {{ match.player2_name }}
+              </h2>
+              <div class="text-zinc-400 font-bold uppercase text-xs tracking-widest">
+                РАНГ #{{ player2Stats?.eloRank || match.player2_rank || '0' }}
+              </div>
+              <div class="text-green-400/60 font-bold uppercase text-[10px] tracking-widest mt-1">
+                ЛУЧШЕЕ ВРЕМЯ: {{ formatMs(player2Stats?.bestTime) }}
+              </div>
+            </div>
+          </div>
+
+          <a
+            v-if="player2Stats?.connections?.twitch"
+            :href="`https://twitch.tv/${player2Stats.connections.twitch.name}`"
+            target="_blank"
+            class="mb-6 w-full bg-[#9146ff] hover:bg-[#a970ff] text-white text-center py-3 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+          >
+            СМОТРЕТЬ ТРАНСЛЯЦИЮ
+          </a>
+
+          <div class="grid grid-cols-2 gap-4 mb-8 mt-auto">
+            <div class="bg-black/20 rounded-2xl p-4 border border-white/5">
+              <div class="text-zinc-500 text-[10px] font-black uppercase mb-1">Процент побед</div>
+              <div class="text-xl font-black text-yellow-500">
+                {{ calculateWinRate(player2Stats) }}
+              </div>
+            </div>
+            <div class="bg-black/20 rounded-2xl p-4 border border-white/5">
+              <div class="text-zinc-500 text-[10px] font-black uppercase mb-1">Всего матчей</div>
+              <div class="text-xl font-black">{{ player2Stats?.totalMatches || 0 }}</div>
+            </div>
+          </div>
+
+          <div
+            class="flex items-center justify-between bg-black/30 p-5 rounded-2xl border border-white/5"
+          >
+            <span class="text-zinc-400 font-black uppercase text-xs tracking-widest">Счет</span>
+            <div class="flex items-center gap-3">
+              <div class="flex gap-1.5">
+                <div
+                  v-for="i in winThreshold"
+                  :key="i"
+                  :class="[
+                    'w-4 h-4 rotate-45 border-2 transition-all duration-500',
+                    match.score2 >= i
+                      ? 'bg-green-400 border-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'
+                      : 'border-white/10',
+                  ]"
+                ></div>
+              </div>
+              <span class="text-4xl font-black ml-2">{{ match.score2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Список Сидов (Maps) -->
+      <div
+        v-if="seedsArray.length > 0"
+        class="bg-[#3C2A7A]/30 border border-white/10 rounded-[2rem] p-8 mb-8"
+      >
+        <h3 class="text-xl font-black uppercase mb-8 flex items-center gap-3">
+          <span class="w-1 h-6 bg-[#7c3aed]"></span> Сгенерированные миры
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="seed in seedsArray"
+            :key="seed.id"
+            class="bg-black/40 border border-white/10 p-5 rounded-2xl flex flex-col gap-2 hover:border-[#7c3aed]/50 transition-all group"
+          >
+            <div class="flex justify-between items-center">
+              <span class="text-[10px] font-black text-[#7c3aed] uppercase tracking-widest"
+                >Сид {{ seed.id }}</span
+              >
+            </div>
+            <div class="text-sm text-zinc-300 break-all select-all leading-relaxed">
+              {{ seed.name }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Детали и Статистика -->
+      <div class="grid md:grid-cols-2 gap-8">
+        <div class="bg-[#3C2A7A]/30 border border-white/10 rounded-[2rem] p-8">
+          <h3 class="text-xl font-black uppercase mb-6 flex items-center gap-3">
+            <span class="w-1 h-6 bg-[#7c3aed]"></span> Информация
+          </h3>
+          <div class="space-y-4">
+            <div class="flex justify-between border-b border-white/5 pb-2">
+              <span class="text-zinc-500 font-bold uppercase text-xs">Формат</span>
+              <span class="font-black uppercase tracking-widest">{{ formatText }}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/5 pb-2">
+              <span class="text-zinc-500 font-bold uppercase text-xs">Версия</span>
+              <span class="font-black uppercase">{{ match.version || '1.16.1' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#3C2A7A]/30 border border-white/10 rounded-[2rem] p-8">
+          <h3 class="text-xl font-black uppercase mb-6 flex items-center gap-3">
+            <span class="w-1 h-6 bg-green-400"></span> Турнир
+          </h3>
+          <div class="space-y-4">
+            <div class="flex justify-between border-b border-white/5 pb-2">
+              <span class="text-zinc-500 font-bold uppercase text-xs">Призовой фонд</span>
+              <span class="font-black uppercase text-yellow-500">{{
+                tournament?.prize_pool || '$0'
+              }}</span>
+            </div>
+            <div class="flex justify-between border-b border-white/5 pb-2">
+              <span class="text-zinc-500 font-bold uppercase text-xs">Дата проведения</span>
+              <span class="font-black uppercase">{{
+                new Date(match.match_date).toLocaleDateString('ru-RU')
+              }}</span>
             </div>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Загрузка матча -->
-    <div v-else class="container mx-auto px-4 py-6">
-      <div class="text-center text-white min-h-[60vh] flex flex-col justify-center">
-        <!-- Анимация загрузки -->
-        <div class="flex justify-center mb-8">
-          <div class="relative">
-            <!-- Внешнее кольцо -->
-            <div class="w-20 h-20 border-4 border-gray-600 rounded-full animate-spin"></div>
-            <!-- Внутреннее кольцо -->
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div class="w-12 h-12 border-4 border-[#77bb55] rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
-            </div>
-            <!-- Центральная точка -->
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div class="w-3 h-3 bg-[#77bb55] rounded-full animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Текст -->
-        <div class="space-y-4">
-          <p class="text-2xl font-bold text-gray-300 mb-2">Загрузка матча...</p>
-          <p class="text-gray-400 text-lg">Пожалуйста, подождите</p>
-        </div>
-      </div>
+    <!-- Лоадер -->
+    <div v-else class="flex flex-col items-center justify-center min-h-[80vh] gap-4">
+      <div
+        class="w-16 h-16 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin"
+      ></div>
+      <p class="font-black uppercase tracking-[0.3em] text-zinc-500 text-xs">Загрузка матча...</p>
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import Header from '@/components/layout/Header.vue'
-import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
-import { useRoute } from 'vue-router'
-import { computed, ref, onMounted, watch } from 'vue'
-import { allMatches, type Match, type MatchPlayer, getMatchesWithAllData } from '@/types/matches'
-
-const route = useRoute()
-const matchId = parseInt(route.params.id as string)
-
-// Получаем текущий матч по ID с обновленными данными из API
-const currentMatch = ref<Match | null>(null)
-
-// Загружаем данные при монтировании компонента
-onMounted(async () => {
-  const matchesWithAllData = await getMatchesWithAllData()
-  const match = matchesWithAllData.find((match) => match.id === matchId)
-  currentMatch.value = match || null
-})
-
-// Следим за изменением route
-watch(() => route.params.id, async (newId) => {
-  const newMatchId = parseInt(newId as string)
-  const matchesWithAllData = await getMatchesWithAllData()
-  const match = matchesWithAllData.find((match) => match.id === newMatchId)
-  currentMatch.value = match || null
-})
-
-// Форматирование даты для upcoming матчей
-const formatDetailedDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+<style scoped>
+/* Основной фоновый цвет страницы (void-purple) */
+.bg-void-purple {
+  background-color: #0f051d;
 }
 
-// Форматирование даты для завершенных матчей
-const formatMatchDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-// Перевод статусов на русский
-const getStatusText = (status: string) => {
-  const statusMap: { [key: string]: string } = {
-    'upcoming': 'скоро',
-    'live': 'в эфире',
-    'completed': 'завершено'
+/* Анимация вращения для границ кнопки Twitch */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-  return statusMap[status] || status
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-// Классы для карточек игроков
-const getPlayerCardClass = (player: MatchPlayer, index: number) => {
-  if (currentMatch.value?.status === 'completed') {
-    return player.score >= 2 ? 'border-[#77bb55] bg-gray-750' : 'border-red-500 bg-gray-750'
-  } else if (currentMatch.value?.status === 'live') {
-    return index === 0 ? 'border-red-500' : 'border-gray-600'
-  }
-  return 'border-gray-600'
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
 }
-</script>
+
+/* Эффект кастомного скроллбара для темной темы */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f051d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7c3aed;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a78bfa;
+}
+
+/* Стили для карточек игроков при наведении */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Плавное свечение для активных ромбов счета */
+.shadow-\[0_0_10px_\#7c3aed\] {
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.6);
+}
+
+/* Улучшение читаемости текста на градиентном фоне */
+h1,
+h2,
+h3 {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Адаптивность для длинных названий сидов */
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Стиль для меток "СКОРО" и "В ЭФИРЕ" */
+.font-black {
+  font-weight: 900;
+}
+</style>

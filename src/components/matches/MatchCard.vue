@@ -1,87 +1,172 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
+
+const props = defineProps<{
+  match: {
+    id: number
+    tournament_name: string
+    player1_id: any
+    player1_name: string
+    player1_rank: number | null
+    player2_id: any
+    player2_name: string
+    player2_rank: number | null
+    score1: number
+    score2: number
+    match_date: string
+    status: string
+    format: string
+    category: string
+    // Добавляем | null ко всем сидам
+    seed1?: string | null
+    seed2?: string | null
+    seed3?: string | null
+    seed4?: string | null
+    seed5?: string | null
+    seed6?: string | null
+    seed7?: string | null
+  }
+}>()
+
+// Адаптивные сиды
+const seedsArray = computed(() => {
+  const formatCount = parseInt(props.match.format) || 1
+  const result = []
+  for (let i = 1; i <= formatCount; i++) {
+    const seedValue = (props.match as any)[`seed${i}`]
+    if (seedValue) {
+      result.push({ id: i, name: seedValue })
+    }
+  }
+  return result
+})
+
+// Порог побед (ромбы)
+const winThreshold = computed(() => {
+  const num = parseInt(props.match.format)
+  return !isNaN(num) ? Math.ceil(num / 2) : 1
+})
+
+const matchTime = computed(() => {
+  if (!props.match.match_date) return '--:--'
+  return new Date(props.match.match_date).toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+})
+</script>
+
 <template>
-  <RouterLink
-    :to="`/match/${match.id}`"
-    class="block bg-gray-800 border-2 rounded-lg p-3 w-72 hover:border-[#77bb55] hover:bg-gray-750 transition-all duration-300 group"
-    :class="{
-      'border-red-500': match.status === 'live',
-      'border-gray-600': match.status === 'upcoming',
-      'border-gray-700': match.status === 'completed',
-    }"
+  <!-- Заменил h-full на h-auto -->
+  <div
+    class="w-full h-auto bg-[#1a133d]/80 border border-white/10 rounded-2xl p-5 flex flex-col gap-4 shadow-xl backdrop-blur-md hover:border-purple-500/50 transition-all group relative overflow-hidden"
   >
-    <!-- Заголовок матча -->
-    <div class="flex justify-between items-start mb-3">
-      <h3 class="text-white font-bold text-sm group-hover:text-[#77bb55] transition-colors">
-        {{ match.tournament }}
-      </h3>
-      <div
-        v-if="match.status === 'live'"
-        class="flex items-center space-x-1 bg-red-600 px-2 py-1 rounded text-xs text-white"
+    <!-- Header -->
+    <div class="flex justify-between items-start leading-tight relative z-10">
+      <div class="flex flex-col">
+        <span
+          class="text-[13px] font-black uppercase text-white tracking-tight truncate max-w-[180px]"
+        >
+          {{ match.tournament_name }}
+        </span>
+        <span class="text-[11px] font-bold text-zinc-400 uppercase"> — {{ match.category }} </span>
+      </div>
+      <span
+        class="text-[11px] font-black text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20"
       >
-        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-        <span>LIVE</span>
-      </div>
-      <div v-else-if="match.status === 'completed'" class="text-gray-400 text-xs">Завершен</div>
-      <div v-else class="text-gray-400 text-xs">
-        {{ match.time }}
-      </div>
+        {{ matchTime }}
+      </span>
     </div>
 
-    <!-- Участники и счет -->
-    <div class="space-y-2">
-      <div
-        v-for="player in match.players"
-        :key="player.id"
-        class="flex items-center justify-between"
-      >
-        <div class="flex items-center space-x-2 flex-1">
-          <PlayerAvatar :player="player" :show-status="match.status === 'live'" />
-          <span class="text-white font-medium text-sm flex-1">{{ player.name }}</span>
+    <!-- Players Section -->
+    <div class="flex flex-col gap-4 my-1 relative z-10">
+      <!-- Player 1 -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <PlayerAvatar
+            :player="{
+              id: match.player1_id,
+              name: match.player1_name,
+              rank: match.player1_rank || undefined,
+            }"
+            size="sm"
+          />
+          <span
+            class="text-[14px] font-black text-white uppercase tracking-wider group-hover:text-purple-400 transition-colors"
+          >
+            {{ match.player1_name }}
+          </span>
         </div>
-
-        <!-- Счет для Best of 3 (2 круга) -->
-        <div class="flex space-x-1">
+        <div class="flex gap-1.5">
           <div
-            v-for="n in 2"
-            :key="n"
-            class="w-3 h-3 rounded-full border"
-            :class="getGameScoreClass(player, n)"
+            v-for="i in winThreshold"
+            :key="i"
+            class="w-3 h-3 rotate-45 border-2"
+            :class="
+              match.score1 >= i
+                ? 'bg-purple-500 border-purple-500 shadow-[0_0_8px_#a855f7]'
+                : 'border-white/10 bg-transparent'
+            "
+          ></div>
+        </div>
+      </div>
+
+      <!-- Player 2 -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <PlayerAvatar
+            :player="{
+              id: match.player2_id,
+              name: match.player2_name,
+              rank: match.player2_rank || undefined,
+            }"
+            size="sm"
+          />
+          <span
+            class="text-[14px] font-black text-white uppercase tracking-wider group-hover:text-purple-400 transition-colors"
+          >
+            {{ match.player2_name }}
+          </span>
+        </div>
+        <div class="flex gap-1.5">
+          <div
+            v-for="i in winThreshold"
+            :key="i"
+            class="w-3 h-3 rotate-45 border-2"
+            :class="
+              match.score2 >= i
+                ? 'bg-purple-500 border-purple-500 shadow-[0_0_8px_#a855f7]'
+                : 'border-white/10 bg-transparent'
+            "
           ></div>
         </div>
       </div>
     </div>
 
-    <!-- Дополнительная информация -->
-    <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-700">
-      <span class="text-gray-400 text-xs">{{ match.seedType }}</span>
-      <span class="text-gray-400 text-xs">{{ match.format }}</span>
-    </div>
+    <div class="h-px bg-white/5 w-full"></div>
 
-    <!-- Зрители для live матчей -->
-    <div
-      v-if="match.status === 'live' && match.viewers"
-      class="flex items-center justify-center mt-2 pt-2 border-t border-gray-700"
-    >
-      <span class="text-gray-400 text-xs flex items-center space-x-1">
-        <span>👁️</span>
-        <span>{{ match.viewers }} зрителей</span>
-      </span>
+    <!-- Footer: Сиды -->
+    <!-- Убрал min-h-[80px], чтобы высота была только по тексту -->
+    <div class="flex flex-col gap-3 relative z-10">
+      <div v-if="seedsArray.length > 0" class="flex flex-col gap-2">
+        <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Сиды:</span>
+        <div class="flex flex-wrap gap-1.5">
+          <span
+            v-for="seed in seedsArray"
+            :key="seed.id"
+            class="text-[10px] font-bold bg-white/5 border border-white/10 px-2 py-1 rounded text-zinc-300"
+          >
+            {{ seed.name }}
+          </span>
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-between items-center">
+        <span class="text-[11px] font-black text-zinc-400 uppercase tracking-tighter">
+          Best of {{ match.format }}
+        </span>
+      </div>
     </div>
-  </RouterLink>
+  </div>
 </template>
-
-<script setup lang="ts">
-import { RouterLink } from 'vue-router'
-import PlayerAvatar from '@/components/players/PlayerAvatar.vue'
-import type { Match, MatchPlayer } from '@/types/matches'
-
-defineProps<{
-  match: Match
-}>()
-
-const getGameScoreClass = (player: MatchPlayer, gameNumber: number) => {
-  if (gameNumber <= player.score) {
-    return 'bg-[#77bb55] border-[#77bb55]' // Выигранные игры
-  }
-  return 'bg-transparent border-gray-600' // Несыгранные/проигранные игры
-}
-</script>

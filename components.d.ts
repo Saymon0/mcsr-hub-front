@@ -21,6 +21,8 @@ declare module 'vue' {
     MatchCard: typeof import('./src/components/matches/MatchCard.vue')['default']
     PlayerAvatar: typeof import('./src/components/players/PlayerAvatar.vue')['default']
     ProductComparison: typeof import('./src/components/ProductComparison.vue')['default']
+    RankedHub: typeof import('./src/components/RankedHub.vue')['default']
+    RankedStreamHub: typeof import('./src/components/RankedStreamHub.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     RunCard: typeof import('./src/components/runs/RunCard.vue')['default']
