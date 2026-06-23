@@ -69,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import API_URL from '@/api';
+import API_URL from '@/api'
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
@@ -97,7 +97,7 @@ const handleLogin = async () => {
     message.value = ''
 
     // 1. Меняем URL на правильный роут Node.js сервера
-    const res = await axios.post(`${API_BASE_URL}/auth/login`, form.value)
+    const res = await axios.post(`${API_BASE_URL}/api/auth/login`, form.value)
 
     // 2. Успешный вход (если сервер вернул 200 OK, значит res.data содержит токен)
     if (res.data.token) {

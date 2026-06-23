@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import API_URL from '@/api';
+import API_URL from '@/api'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import Header from '@/components/layout/Header.vue'
@@ -211,7 +211,7 @@ onMounted(async () => {
 
   if (token && user.value) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/picks/${TOURNAMENT_ID}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/picks/${TOURNAMENT_ID}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
@@ -248,7 +248,7 @@ const selectWinner = async (roundIndex: number, matchIndex: number, playerNum: n
 
   try {
     await axios.post(
-      `${API_BASE_URL}/picks`,
+      `${API_BASE_URL}/api/picks`,
       {
         tournamentId: TOURNAMENT_ID,
         matchId: match.id,
@@ -279,7 +279,7 @@ const selectThirdPlace = async (playerNum: number) => {
   try {
     const newWinnerId = match.winnerId === playerNum ? null : playerNum
     await axios.post(
-      `${API_BASE_URL}/picks`,
+      `${API_BASE_URL}/api/picks`,
       {
         tournamentId: TOURNAMENT_ID,
         matchId: match.id,
@@ -353,9 +353,9 @@ const clearSubsequentRounds = (roundIndex: number, matchIndex: number) => {
       >
         <div class="flex items-center gap-2">
           <span class="text-[#00ff6a] font-bold text-xs uppercase tracking-tight"
-            >Прогнозы закроются через:</span
+            >Прогнозы закроются:</span
           >
-          <span class="text-white text-sm font-bold">4д 01:41:47</span>
+          <span class="text-white text-sm font-bold"> 30 Июня в 22:00</span>
         </div>
         <span class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">
           Редактирование доступно только до начала раунда

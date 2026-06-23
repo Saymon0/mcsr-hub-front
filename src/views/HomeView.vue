@@ -11,7 +11,6 @@
       <div class="container mx-auto px-4">
         <h2 class="text-2xl font-bold text-end-light text-center mb-6">Предстоящие матчи</h2>
 
-        <!-- Загрузка матчей -->
         <div v-if="loadingMatches" class="text-center py-8">
           <div
             class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-end-purple mb-4"
@@ -19,7 +18,6 @@
           <div class="text-end-muted text-lg">Загрузка матчей...</div>
         </div>
 
-        <!-- Сетка матчей -->
         <div
           class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start max-w-7xl mx-auto"
         >
@@ -48,7 +46,7 @@
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a
-              href="https://discord.gg/mcsr-ranked-1056779246728658984"
+              href="https://discord.gg/mcsrranked"
               target="_blank"
               class="bg-end-purple hover:bg-end-accent text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-lg transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
@@ -252,8 +250,9 @@
     </main>
   </div>
 </template>
+
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import Header from '@/components/layout/Header.vue'
 import MatchCard from '@/components/matches/MatchCard.vue'
 
@@ -273,14 +272,10 @@ const leaderboardError = ref(false)
 // Состояния для стримов
 const loadingStreams = ref(true)
 const onlineStreamers = ref<any[]>([])
-const topSpeedrunners = ref<any[]>([])
 const activeStreamEmbeds = ref(new Set<string>())
 
-// Twitch API конфиг
-const TWITCH_CLIENT_ID = 'dundyn05ztgh2h0pkojf0z2zhyvsoa'
-const TWITCH_CLIENT_SECRET = 'mxw55kxt62hqryzpext6dw9zn3mf4w'
-let twitchAccessToken = ref<string>('')
 let leaderboardInterval: number | null = null
+let streamsInterval: number | null = null
 
 // Вспомогательные функции
 const generateMinecraftAvatar = (username: string) =>
@@ -315,19 +310,15 @@ const getAvatarAnimation = (rank: number) => {
   return animations[rank as keyof typeof animations] || ''
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// Получение списка матчей из API
+// 1. Получение списка матчей из вашего API
 const fetchMatches = async () => {
   try {
     loadingMatches.value = true
-    // Заменяем жестко прописанный URL на переменную окружения
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/matches`)
-
     if (res.ok) {
       matches.value = await res.json()
     } else {
-      console.error('Ошибка ответа сервера:', res.status)
+      console.error('Ошибка ответа сервера матчей:', res.status)
     }
   } catch (e) {
     console.error('Ошибка загрузки матчей:', e)
@@ -336,120 +327,90 @@ const fetchMatches = async () => {
   }
 }
 
-// Получение данных рейтинга
+// 2. Получение данных рейтинга через ваш бэкенд
 const fetchLeaderboard = async () => {
   try {
     loadingLeaderboard.value = true
     leaderboardError.value = false
-    const response = await fetch('https://mcsrranked.com/api/leaderboard')
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ranked/leaderboard`)
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-    const data = await response.json()
-    if (data.status === 'success' && data.data?.users) {
-      realLeaderboard.value = data.data.users.slice(0, 10).map((player: any, index: number) => ({
-        uuid: player.uuid || `player-${index}`,
-        username: player.nickname || 'Unknown',
-        elo: player.eloRate || 0,
-        rank: player.eloRank || index + 1,
-        avatar: generateMinecraftAvatar(player.nickname),
-        country: player.country,
-      }))
-    }
+    const users = await response.json()
+
+    realLeaderboard.value = users.slice(0, 10).map((player: any, index: number) => ({
+      uuid: player.uuid || `player-${index}`,
+      username: player.nickname || player.username || 'Unknown',
+      // ИСПРАВЛЕНО: убран player.eloRank, чтобы не подставлялось место в топе вместо ELO
+      elo: player.eloRate || player.elo || 0,
+      rank: player.rank || player.eloRank || index + 1,
+      avatar: generateMinecraftAvatar(player.nickname || player.username),
+      country: player.country || 'us',
+    }))
   } catch (error) {
+    console.error('Ошибка загрузки лидерборда:', error)
     leaderboardError.value = true
   } finally {
     loadingLeaderboard.value = false
   }
 }
 
-// Поиск Twitch-аккаунтов топовых игроков
-const fetchTopSpeedrunners = async () => {
+// 3. Мгновенное получение живых стримов из фонового кэша вашего сервера
+const checkOnlineStreamers = async (isInitial = false) => {
   try {
-    const response = await fetch('https://mcsrranked.com/api/leaderboard')
+    if (isInitial) {
+      loadingStreams.value = true
+    }
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ranked/top-streams`)
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     const data = await response.json()
-    if (data.status === 'success' && data.data?.users) {
-      const topPlayers = data.data.users.slice(0, 50)
-      const speedrunnersWithTwitch = []
-      const batchSize = 10
 
-      for (let i = 0; i < topPlayers.length; i += batchSize) {
-        const batch = topPlayers.slice(i, i + batchSize)
-        const batchPromises = batch.map(async (player: any) => {
-          try {
-            const userResponse = await fetch(`https://mcsrranked.com/api/users/${player.uuid}`)
-            const userData = await userResponse.json()
-            if (userData.status === 'success' && userData.data?.connections?.twitch) {
-              return {
-                uuid: player.uuid,
-                name: player.nickname,
-                login: userData.data.connections.twitch.name, // Используем name для Twitch API
-                avatar: generateMinecraftAvatar(player.nickname),
-                rank: player.eloRank || 0,
-                embedLoaded: false,
-              }
-            }
-          } catch (e) {
-            return null
-          }
+    if (onlineStreamers.value.length === 0) {
+      onlineStreamers.value = data.map((streamer: any) => ({
+        ...streamer,
+        avatar: generateMinecraftAvatar(streamer.name),
+        embedLoaded: false,
+      }))
+    } else {
+      // --- УМНОЕ ОБНОВЛЕНИЕ ДАННЫХ БЕЗ ПЕРЕЗАГРУЗКИ IFRAME ---
+      const newStreamsMap = new Map<string, any>(data.map((s: any) => [s.login.toLowerCase(), s]))
+
+      const updatedList = onlineStreamers.value.filter((currentStreamer: any) => {
+        const loginKey = currentStreamer.login.toLowerCase()
+        const freshData = newStreamsMap.get(loginKey)
+
+        if (freshData) {
+          currentStreamer.viewer_count = freshData.viewer_count
+          currentStreamer.title = freshData.title
+          currentStreamer.rank = freshData.rank
+
+          newStreamsMap.delete(loginKey)
+          return true
+        } else {
+          activeStreamEmbeds.value.delete(currentStreamer.login)
+          return false
+        }
+      })
+
+      newStreamsMap.forEach((freshStreamer: any) => {
+        updatedList.push({
+          ...freshStreamer,
+          avatar: generateMinecraftAvatar(freshStreamer.name),
+          embedLoaded: false,
         })
-        const results = await Promise.all(batchPromises)
-        speedrunnersWithTwitch.push(...results.filter(Boolean))
-        if (i + batchSize < topPlayers.length) await delay(500)
-      }
-      topSpeedrunners.value = speedrunnersWithTwitch
+      })
+
+      onlineStreamers.value = updatedList
+    }
+
+    if ((window as any).Twitch) {
+      await nextTick()
+      createTwitchEmbeds()
     }
   } catch (e) {
-    console.error(e)
-  }
-}
-
-const getTwitchAccessToken = async () => {
-  const response = await fetch('https://id.twitch.tv/oauth2/token', {
-    method: 'POST',
-    body: new URLSearchParams({
-      client_id: TWITCH_CLIENT_ID,
-      client_secret: TWITCH_CLIENT_SECRET,
-      grant_type: 'client_credentials',
-    }),
-  })
-  const data = await response.json()
-  return data.access_token
-}
-
-const checkOnlineStreamers = async () => {
-  try {
-    loadingStreams.value = true
-    if (topSpeedrunners.value.length === 0) await fetchTopSpeedrunners()
-    if (topSpeedrunners.value.length === 0) return
-    if (!twitchAccessToken.value) twitchAccessToken.value = await getTwitchAccessToken()
-
-    const userLogins = topSpeedrunners.value.map((s) => s.login)
-    const response = await fetch(
-      `https://api.twitch.tv/helix/streams?user_login=${userLogins.join('&user_login=')}&first=50`,
-      {
-        headers: {
-          'Client-ID': TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${twitchAccessToken.value}`,
-        },
-      },
-    )
-    const data = await response.json()
-    const updated = (data.data || [])
-      .map((stream: any) => {
-        const info = topSpeedrunners.value.find(
-          (s) => s.login.toLowerCase() === stream.user_login.toLowerCase(),
-        )
-        return info
-          ? { ...info, title: stream.title, viewer_count: stream.viewer_count, embedLoaded: false }
-          : null
-      })
-      .filter(Boolean)
-
-    updated.sort((a: any, b: any) => b.viewer_count - a.viewer_count)
-    onlineStreamers.value = updated
-  } catch (e) {
-    console.error(e)
+    console.error('Ошибка фонового получения стримов:', e)
   } finally {
-    loadingStreams.value = false
+    if (isInitial) {
+      loadingStreams.value = false
+    }
   }
 }
 
@@ -489,13 +450,17 @@ const initializeTwitchEmbeds = () => {
 
 onUnmounted(() => {
   if (leaderboardInterval) clearInterval(leaderboardInterval)
+  if (streamsInterval) clearInterval(streamsInterval)
   activeStreamEmbeds.value.clear()
 })
 
 onMounted(async () => {
-  await Promise.all([fetchMatches(), fetchLeaderboard(), checkOnlineStreamers()])
+  await Promise.all([fetchMatches(), fetchLeaderboard(), checkOnlineStreamers(true)])
+
   setTimeout(initializeTwitchEmbeds, 500)
-  leaderboardInterval = window.setInterval(fetchLeaderboard, 600000)
+
+  leaderboardInterval = window.setInterval(fetchLeaderboard, 600000) // Раз в 10 минут
+  streamsInterval = window.setInterval(() => checkOnlineStreamers(false), 60000) // Раз в минуту
 })
 </script>
 

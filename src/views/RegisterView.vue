@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-void-purple relative flex items-center justify-center">
-    <!-- Фоновое изображение -->
     <div class="fixed inset-0 -z-10">
       <img src="/background.png" alt="Background" class="w-full h-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-b from-purple-900/40 to-violet-950/60"></div>
@@ -15,7 +14,6 @@
       </div>
 
       <form @submit.prevent="handleRegister" class="space-y-4">
-        <!-- Поле Username -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Никнейм</label>
           <input
@@ -27,7 +25,6 @@
           />
         </div>
 
-        <!-- Поле Email -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
           <input
@@ -39,7 +36,6 @@
           />
         </div>
 
-        <!-- Поле Пароль -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Пароль</label>
           <input
@@ -50,7 +46,6 @@
           />
         </div>
 
-        <!-- Поле Повтор пароля -->
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">Повтор пароля</label>
           <input
@@ -61,7 +56,6 @@
           />
         </div>
 
-        <!-- Выбор страны (Кастомный выпадающий список с флагами) -->
         <div class="relative" ref="dropdownRef">
           <label class="block text-sm font-medium text-gray-300 mb-1">Страна</label>
           <div
@@ -87,12 +81,10 @@
             >
           </div>
 
-          <!-- Меню со списком стран -->
           <div
             v-show="dropdownOpen"
             class="absolute z-50 w-full mt-2 bg-[#2d1b69] border border-[#8b5cf6]/50 rounded-lg shadow-xl overflow-hidden"
           >
-            <!-- Поиск внутри списка -->
             <div class="p-2 border-b border-[#8b5cf6]/30 bg-[#2d1b69]">
               <input
                 v-model="countrySearch"
@@ -103,7 +95,6 @@
               />
             </div>
 
-            <!-- Прокручиваемый список -->
             <div class="max-h-52 overflow-y-auto custom-scrollbar">
               <div
                 v-if="filteredCountries.length === 0"
@@ -129,7 +120,6 @@
           </div>
         </div>
 
-        <!-- Сообщения об ошибках или успехе -->
         <div
           v-if="message"
           :class="messageClass"
@@ -160,10 +150,11 @@
 </template>
 
 <script setup lang="ts">
-import API_URL from '@/api';
+import API_URL from '@/api'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import staticCountries from '@/assets/countries.json'
 
 const router = useRouter()
 const loading = ref(false)
@@ -185,24 +176,9 @@ const dropdownOpen = ref(false)
 const countrySearch = ref('')
 const dropdownRef = ref<HTMLElement | null>(null)
 
-// Загрузка всех стран мира
-const fetchCountries = async () => {
-  try {
-    const res = await axios.get('https://restcountries.com/v3.1/all?fields=cca2,translations,name')
-    countries.value = res.data
-      .map((c: any) => {
-        // Ищем русское название, если нет - берем английское
-        const ruName = c.translations?.rus?.common || c.translations?.rus?.official
-        const enName = c.name?.common || c.name?.official
-        return {
-          code: c.cca2.toLowerCase(),
-          name: ruName || enName || 'Unknown',
-        }
-      })
-      .sort((a: any, b: any) => a.name.localeCompare(b.name, 'ru'))
-  } catch (err) {
-    console.error('Ошибка загрузки списка стран:', err)
-  }
+// Инициализация списка стран из статических данных
+const fetchCountries = () => {
+  countries.value = [...staticCountries].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
 }
 
 // Поиск по странам
@@ -266,27 +242,40 @@ const handleRegister = async () => {
     loading.value = true
     message.value = ''
 
-    // 1. Меняем URL на правильный путь Node.js сервера
-    const response = await axios.post(`${API_URL}/api/auth/register`, form.value)
+    const res = await axios.post(`${API_URL}/api/auth/register`, {
+      username: form.value.username,
+      email: form.value.email,
+      password: form.value.password,
+      flag: form.value.flag,
+    })
 
     status.value = 'success'
     message.value = 'Регистрация успешна! Перенаправляем...'
 
-    // Сохраняем данные пользователя
-    localStorage.setItem(
-      'user',
-      JSON.stringify({
-        username: form.value.username,
-        flag: form.value.flag,
-        isLoggedIn: true,
-      }),
-    )
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token)
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          ...res.data.user,
+          isLoggedIn: true,
+        }),
+      )
+    } else {
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          username: form.value.username,
+          flag: form.value.flag,
+          isLoggedIn: true,
+        }),
+      )
+    }
 
     setTimeout(() => {
       router.push('/')
     }, 1500)
   } catch (err) {
-    // 2. Безопасная обработка ошибок Axios
     status.value = 'error'
     if (axios.isAxiosError(err)) {
       message.value = err.response?.data?.error || 'Ошибка при регистрации'

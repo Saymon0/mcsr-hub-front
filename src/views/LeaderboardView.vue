@@ -18,7 +18,9 @@
 
         <!-- Состояние загрузки -->
         <div v-if="loading" class="text-center py-12">
-          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-end-purple mb-4"></div>
+          <div
+            class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-end-purple mb-4"
+          ></div>
           <div class="text-end-light text-lg">Загрузка рейтинга...</div>
         </div>
 
@@ -34,7 +36,10 @@
         </div>
 
         <!-- Таблица рейтинга -->
-        <div v-else class="bg-end-dark/80 rounded-lg border border-end-accent overflow-hidden backdrop-blur-3xl">
+        <div
+          v-else
+          class="bg-end-dark/80 rounded-lg border border-end-accent overflow-hidden backdrop-blur-3xl"
+        >
           <!-- Заголовок таблицы -->
           <div class="bg-end-secondary/70 px-6 py-4 border-b border-end-accent">
             <div class="grid grid-cols-10 gap-2 text-end-light font-semibold text-xs">
@@ -89,7 +94,9 @@
 
                   <!-- Имя и ник -->
                   <div class="flex-1 min-w-0">
-                    <div class="text-end-light font-semibold truncate group-hover:text-white transition-colors">
+                    <div
+                      class="text-end-light font-semibold truncate group-hover:text-white transition-colors"
+                    >
                       {{ player.username }}
                     </div>
                   </div>
@@ -110,7 +117,9 @@
                       class="w-5 h-3 rounded shadow border border-end-accent"
                       loading="lazy"
                     />
-                    <span class="text-end-light font-medium text-xs">{{ getCountryName(player.country) }}</span>
+                    <span class="text-end-light font-medium text-xs">{{
+                      getCountryName(player.country)
+                    }}</span>
                   </div>
                   <div v-else class="text-end-muted text-xs">-</div>
                 </div>
@@ -128,9 +137,7 @@
 
           <!-- Футер таблицы -->
           <div class="bg-end-secondary/50 px-6 py-3 border-t border-end-accent">
-            <div class="text-center text-end-light text-sm">
-              Обновляется каждые 10 минут
-            </div>
+            <div class="text-center text-end-light text-sm">Обновляется каждые 10 минут</div>
           </div>
         </div>
       </div>
@@ -140,7 +147,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Header from '@/components/layout/Header.vue'
 
 // Константы
 const PLAYERS_COUNT = 100
@@ -170,36 +176,36 @@ const handleAvatarError = (event: Event) => {
 // Получение названия страны по коду на русском
 const getCountryName = (countryCode: string) => {
   const countryNames: { [key: string]: string } = {
-    'us': 'США',
-    'gb': 'Великобритания',
-    'ru': 'Россия',
-    'de': 'Германия',
-    'fr': 'Франция',
-    'br': 'Бразилия',
-    'se': 'Швеция',
-    'cf': 'ЦАР',
-    'ca': 'Канада',
-    'au': 'Австралия',
-    'jp': 'Япония',
-    'kr': 'Корея',
-    'cn': 'Китай',
-    'pl': 'Польша',
-    'ua': 'Украина',
-    'nl': 'Нидерланды',
-    'it': 'Италия',
-    'es': 'Испания',
-    'fi': 'Финляндия',
-    'no': 'Норвегия',
-    'dk': 'Дания',
-    'cz': 'Чехия',
-    'sk': 'Словакия',
-    'hu': 'Венгрия',
-    'at': 'Австрия',
-    'ch': 'Швейцария',
-    'be': 'Бельгия',
-    'pt': 'Португалия',
-    'gr': 'Греция',
-    'tr': 'Турция'
+    us: 'США',
+    gb: 'Великобритания',
+    ru: 'Россия',
+    de: 'Германия',
+    fr: 'Франция',
+    br: 'Бразилия',
+    se: 'Швеция',
+    cf: 'ЦАР',
+    ca: 'Канада',
+    au: 'Австралия',
+    jp: 'Япония',
+    kr: 'Корея',
+    cn: 'Китай',
+    pl: 'Польша',
+    ua: 'Украина',
+    nl: 'Нидерланды',
+    it: 'Италия',
+    es: 'Испания',
+    fi: 'Финляндия',
+    no: 'Норвегия',
+    dk: 'Дания',
+    cz: 'Чехия',
+    sk: 'Словакия',
+    hu: 'Венгрия',
+    at: 'Австрия',
+    ch: 'Швейцария',
+    be: 'Бельгия',
+    pt: 'Португалия',
+    gr: 'Греция',
+    tr: 'Турция',
   }
   return countryNames[countryCode.toLowerCase()] || countryCode.toUpperCase()
 }
@@ -215,9 +221,9 @@ const getRankColor = (rank: number) => {
 // Цвета обводки аватаров на основе ранга
 const getAvatarBorderColor = (rank: number) => {
   const colors = {
-    1: 'border-yellow-400',      // Золото для #1
-    2: 'border-gray-300',        // Серебро для #2
-    3: 'border-amber-700',       // Бронза для #3
+    1: 'border-yellow-400', // Золото для #1
+    2: 'border-gray-300', // Серебро для #2
+    3: 'border-amber-700', // Бронза для #3
   }
   return colors[rank as keyof typeof colors] || 'border-end-accent'
 }
@@ -225,9 +231,9 @@ const getAvatarBorderColor = (rank: number) => {
 // Анимации обводки аватаров на основе ранга
 const getAvatarAnimation = (rank: number) => {
   const animations = {
-    1: 'animate-gold-pulse',     // Золото с pulse анимацией
-    2: 'animate-silver-pulse',   // Серебро с pulse анимацией
-    3: 'animate-bronze-pulse',   // Бронза с pulse анимацией
+    1: 'animate-gold-pulse', // Золото с pulse анимацией
+    2: 'animate-silver-pulse', // Серебро с pulse анимацией
+    3: 'animate-bronze-pulse', // Бронза с pulse анимацией
   }
   return animations[rank as keyof typeof animations] || ''
 }
@@ -249,34 +255,91 @@ const fetchLeaderboard = async () => {
     loading.value = true
     error.value = false
 
-    // Загружаем основной рейтинг и лучшие времена параллельно
-    const [leaderboardResponse, bestTimesResponse] = await Promise.all([
-      fetch('https://mcsrranked.com/api/leaderboard'),
-      fetch('https://mcsrranked.com/api/record-leaderboard?distinct=true')
-    ])
+    let leaderboardData: any = null
+    let bestTimesData: any = null
 
-    if (!leaderboardResponse.ok || !bestTimesResponse.ok) {
-      throw new Error('Ошибка загрузки данных')
+    try {
+      // Создаем AbortController для ограничения времени ожидания (таймаута)
+      const controller = new AbortController()
+      // Если официальный API не ответит за 3000 мс (3 секунды), мы принудительно обрываем запрос
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+      // 1. Пробуем запросить оригинальный API (передаем signal контроллера)
+      const [leaderboardResponse, bestTimesResponse] = await Promise.all([
+        fetch('https://mcsrranked.com/api/leaderboard', { signal: controller.signal }),
+        fetch('https://mcsrranked.com/api/record-leaderboard?distinct=true', {
+          signal: controller.signal,
+        }),
+      ])
+
+      // Если успели получить ответ раньше 3 секунд, отменяем таймаут
+      clearTimeout(timeoutId)
+
+      if (!leaderboardResponse.ok || !bestTimesResponse.ok) {
+        throw new Error('Официальный API ответил ошибкой')
+      }
+
+      leaderboardData = await leaderboardResponse.json()
+      bestTimesData = await bestTimesResponse.json()
+    } catch (apiErr) {
+      // Сюда приложение попадет И при ошибке сети (блокировке), И если сработал наш таймаут в 3 секунды
+      console.log(
+        'Официальный API недоступен или отвечает слишком долго. Загружаем локальный кэш...',
+      )
+
+      // Запрашиваем локальный файл из папки public
+      const cacheResponse = await fetch('/mcsr_cache.json')
+
+      if (!cacheResponse.ok) {
+        throw new Error(`Не удалось загрузить локальный кэш: ${cacheResponse.status}`)
+      }
+
+      const cacheJson = await cacheResponse.json()
+
+      // Распаковываем структуру кэша
+      if (cacheJson.leaderboard) {
+        leaderboardData = cacheJson.leaderboard
+        bestTimesData = cacheJson.bestTimes
+      } else {
+        leaderboardData = cacheJson
+        bestTimesData = null
+      }
     }
 
-    const [leaderboardData, bestTimesData] = await Promise.all([
-      leaderboardResponse.json(),
-      bestTimesResponse.json()
-    ])
+    // --- Дальнейшая обработка данных (остается без изменений) ---
+    let processedPlayers: any[] = []
 
-    // Создание мапы лучших времен
-    const bestTimesMap = new Map()
-    if (bestTimesData.status === 'success' && Array.isArray(bestTimesData.data)) {
-      bestTimesData.data.forEach((record: any) => {
-        if (record.user?.uuid && record.time) {
-          bestTimesMap.set(record.user.uuid, record.time)
-        }
-      })
-    }
+    if (Array.isArray(leaderboardData)) {
+      processedPlayers = leaderboardData
+        .slice(0, PLAYERS_COUNT)
+        .map((player: any, index: number) => ({
+          uuid: player.uuid,
+          username: player.nickname || player.username || 'Unknown',
+          elo: player.elo || player.eloRate || 0,
+          rank: player.rank || player.eloRank || index + 1,
+          avatar: generateMinecraftAvatar(player.nickname || player.username),
+          country: player.country,
+          bestTime: player.bestTime || null,
+        }))
+    } else if (
+      leaderboardData &&
+      leaderboardData.status === 'success' &&
+      leaderboardData.data?.users
+    ) {
+      const bestTimesMap = new Map()
+      if (
+        bestTimesData &&
+        bestTimesData.status === 'success' &&
+        Array.isArray(bestTimesData.data)
+      ) {
+        bestTimesData.data.forEach((record: any) => {
+          if (record.user?.uuid && record.time) {
+            bestTimesMap.set(record.user.uuid, record.time)
+          }
+        })
+      }
 
-    // Обработка данных рейтинга
-    if (leaderboardData.status === 'success' && leaderboardData.data?.users) {
-      leaderboard.value = leaderboardData.data.users
+      processedPlayers = leaderboardData.data.users
         .slice(0, PLAYERS_COUNT)
         .map((player: any, index: number) => ({
           uuid: player.uuid,
@@ -285,14 +348,15 @@ const fetchLeaderboard = async () => {
           rank: player.eloRank || index + 1,
           avatar: generateMinecraftAvatar(player.nickname),
           country: player.country,
-          bestTime: bestTimesMap.get(player.uuid) || null
+          bestTime: bestTimesMap.get(player.uuid) || null,
         }))
     } else {
-      throw new Error('Неверная структура ответа API')
+      throw new Error('Не удалось прочитать структуру данных')
     }
 
+    leaderboard.value = processedPlayers
   } catch (err) {
-    console.error('Ошибка при загрузке рейтинга:', err)
+    console.error('Критическая ошибка загрузки рейтинга:', err)
     error.value = true
     leaderboard.value = []
   } finally {
@@ -327,42 +391,48 @@ onMounted(() => {
 
 /* Анимации для аватаров рейтинга */
 @keyframes goldPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 3px rgba(234, 179, 8, 0.5);
     border-color: rgb(234, 179, 8);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 8px rgba(234, 179, 8, 0.8),
-                inset 0 0 8px rgba(234, 179, 8, 0.3);
+    box-shadow:
+      0 0 8px rgba(234, 179, 8, 0.8),
+      inset 0 0 8px rgba(234, 179, 8, 0.3);
     border-color: rgb(250, 204, 21);
     transform: scale(1.05);
   }
 }
 
 @keyframes silverPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 3px rgba(209, 213, 219, 0.4);
     border-color: rgb(209, 213, 219);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 6px rgba(209, 213, 219, 0.7),
-                inset 0 0 6px rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 0 6px rgba(209, 213, 219, 0.7),
+      inset 0 0 6px rgba(255, 255, 255, 0.3);
     border-color: rgb(243, 244, 246);
     transform: scale(1.05);
   }
 }
 
 @keyframes bronzePulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 3px rgba(180, 83, 9, 0.4);
     border-color: rgb(180, 83, 9);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 6px rgba(180, 83, 9, 0.7),
-                inset 0 0 6px rgba(217, 119, 6, 0.3);
+    box-shadow:
+      0 0 6px rgba(180, 83, 9, 0.7),
+      inset 0 0 6px rgba(217, 119, 6, 0.3);
     border-color: rgb(217, 119, 6);
     transform: scale(1.05);
   }
@@ -383,7 +453,6 @@ onMounted(() => {
 
 <style>
 /* Глобальные стили для фиолетовой темы */
-
 
 .bg-end-dark {
   background-color: #2d1b69;

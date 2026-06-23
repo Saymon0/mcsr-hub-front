@@ -31,8 +31,6 @@ const player2Stats = ref<PlayerStats | null>(null)
 
 /**
  * Вычисляемый массив сидов.
- * Проходит циклом по количеству игр в формате (например, 3 для BO3)
- * и извлекает поля seed1, seed2... из объекта матча.
  */
 const seedsArray = computed(() => {
   if (!match.value) return []
@@ -66,11 +64,20 @@ const calculateWinRate = (stats: PlayerStats | null) => {
   return Math.round((stats.wins / stats.totalMatches) * 100) + '%'
 }
 
-// Загрузка статистики из MCSR API
+// Умная загрузка статистики из MCSR API с фолбэком на локальный кэш
 const fetchMCSRData = async (nickname: string): Promise<PlayerStats | null> => {
   try {
-    const res = await fetch(`https://api.mcsrranked.com/users/${nickname}`)
-    if (!res.ok) return null
+    const controller = new AbortController()
+    // Тайм-аут 3 секунды на запрос к официальному API
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+    const res = await fetch(`https://api.mcsrranked.com/users/${nickname}`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+
+    if (!res.ok) throw new Error('Официальный API профилей недоступен')
+
     const json = await res.json()
     const data = json.data
 
@@ -86,21 +93,64 @@ const fetchMCSRData = async (nickname: string): Promise<PlayerStats | null> => {
       connections: data.connections,
     }
   } catch (err) {
+    console.log(`Не удалось получить живые данные для ${nickname}. Ищем в локальном кэше...`)
+
+    try {
+      // Пытаемся найти игрока в локальном кэше из папки public
+      const cacheResponse = await fetch('/mcsr_cache.json')
+      if (!cacheResponse.ok) return null
+
+      const cacheJson = await cacheResponse.json()
+      // Поддерживаем обе структуры кэша (чистый массив или объект с полем leaderboard)
+      const playersList = Array.isArray(cacheJson) ? cacheJson : cacheJson.leaderboard || []
+
+      // Ищем игрока по совпадению никнейма
+      const foundPlayer = playersList.find(
+        (p: any) =>
+          p.nickname?.toLowerCase() === nickname.toLowerCase() ||
+          p.username?.toLowerCase() === nickname.toLowerCase(),
+      )
+
+      if (foundPlayer) {
+        // Проверяем, зашито ли лучшее время прямо в игрока или его нужно взять из массива bestTimes
+        let bestTime = foundPlayer.bestTime || null
+        if (!bestTime && cacheJson.bestTimes && Array.isArray(cacheJson.bestTimes)) {
+          const record = cacheJson.bestTimes.find(
+            (r: any) =>
+              r.user?.nickname?.toLowerCase() === nickname.toLowerCase() ||
+              r.user?.username?.toLowerCase() === nickname.toLowerCase(),
+          )
+          if (record) bestTime = record.time
+        }
+
+        return {
+          eloRate: foundPlayer.elo || foundPlayer.eloRate || null,
+          eloRank: foundPlayer.rank || foundPlayer.eloRank || null,
+          wins: foundPlayer.wins || 0,
+          totalMatches: foundPlayer.totalMatches || 0,
+          bestTime: bestTime,
+          connections: foundPlayer.connections || {},
+        }
+      }
+    } catch (cacheErr) {
+      console.error('Ошибка при поиске игрока в локальном кэше:', cacheErr)
+    }
+
     return null
   }
 }
 
-// Основная функция загрузки данных
+// Основная функция загрузки данных матча
 const fetchData = async () => {
   try {
     isLoading.value = true
 
-    // Загружаем матч с использованием динамического URL
+    // Загружаем матч с вашего бэкенда
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}`)
     if (!res.ok) throw new Error('Матч не найден')
     match.value = await res.json()
 
-    // Загружаем турнир и статистику игроков параллельно
+    // Запускаем параллельный сбор данных
     const requests: Promise<any>[] = [
       fetchMCSRData(match.value.player1_name),
       fetchMCSRData(match.value.player2_name),
@@ -108,7 +158,6 @@ const fetchData = async () => {
 
     if (match.value?.tournament_id) {
       requests.push(
-        // Используем импорт переменной окружения вместо API_URL (если он был статичным)
         fetch(`${import.meta.env.VITE_API_URL}/api/tournaments/${match.value.tournament_id}`).then(
           (r) => r.json(),
         ),
@@ -121,7 +170,7 @@ const fetchData = async () => {
     player2Stats.value = p2
     if (tData) tournament.value = tData
   } catch (err) {
-    console.error('Ошибка загрузки:', err)
+    console.error('Ошибка загрузки компонентов матча:', err)
   } finally {
     isLoading.value = false
   }

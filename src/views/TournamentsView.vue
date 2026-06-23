@@ -173,12 +173,6 @@ onMounted(fetchTournaments)
               {{ t.prize_pool || 'Призовой фонд TBA' }}
             </div>
             <!-- Количество игроков -->
-            <div class="flex items-center justify-center gap-2 pt-2 border-t border-white/5">
-              <span class="text-[10px] font-bold uppercase tracking-widest text-[#A78BFA]"
-                >Игроков:</span
-              >
-              <span class="text-xs font-black text-white">{{ t.player_count || 0 }}</span>
-            </div>
           </div>
         </RouterLink>
       </div>
